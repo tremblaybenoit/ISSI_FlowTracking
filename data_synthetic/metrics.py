@@ -201,8 +201,8 @@ class Metrics:
         """
         return np.median(self.absolute_relative_error(), axis=axis)
 
-    def pearson_correlation_coefficient(self, axis: Union[int, tuple] = None) -> floating[Any]:
-        """ Compute the Pearson correlation coefficient between two vector fields.
+    def normalized_error(self, axis: Union[int, tuple] = None) -> floating[Any]:
+        """ Compute the normalized error between two vector fields.
 
             Parameters:
             ----------
@@ -210,15 +210,44 @@ class Metrics:
 
             Returns:
             --------
-            metric: np.ndarray. Pearson correlation coefficient between v1 and v2.
+            metric: np.ndarray. Normalized error between v1 and v2.
+        """
+
+        # Compute the normalized error based on the definition from Schrijver et al. (2005)
+        return np.sum(self.absolute_error(), axis=axis) / np.sum(norm(self.v1x, self.v1y, self.v1z), axis=axis)
+
+    def vector_correlation_coefficient(self, axis: Union[int, tuple] = None) -> floating[Any]:
+        """ Compute the vector correlation coefficient between two vector fields.
+
+            Parameters:
+            ----------
+            axis: tuple, optional. Defaults to None. Axis along which to compute the metric (i.e., spatial axes).
+
+            Returns:
+            --------
+            metric: np.ndarray. Vector correlation coefficient between v1 and v2.
         """
 
         # Compute based on the definition from Schrijver et al. (2005)
         coef = np.sum((self.v1x * self.v2x + self.v1y * self.v2y + self.v1z * self.v2z), axis=axis) / \
-               np.sqrt(np.sum(self.v1x ** 2 + self.v1y ** 2 + self.v1z ** 2, axis=axis) *
-                       np.sum(self.v2x ** 2 + self.v2y ** 2 + self.v2z ** 2, axis=axis))
+               (np.sqrt(np.sum(self.v1x ** 2 + self.v1y ** 2 + self.v1z ** 2, axis=axis)) *
+                np.sqrt(np.sum(self.v2x ** 2 + self.v2y ** 2 + self.v2z ** 2, axis=axis)))
 
         return coef
+
+    def energy_ratio(self, axis: Union[int, tuple] = None) -> floating[Any]:
+        """ Compute the energy ratio between two vector fields.
+
+            Parameters:
+            ----------
+            axis: tuple, optional. Defaults to None. Axis along which to compute the metric (i.e., spatial axes).
+
+            Returns:
+            --------
+            metric: np.ndarray. Energy ratio between v1 and v2.
+        """
+        return (np.sum(self.v2x ** 2 + self.v2y ** 2 + self.v2z ** 2, axis=axis)/
+                np.sum(self.v1x ** 2 + self.v1y ** 2 + self.v1z ** 2, axis=axis))
 
 
 if __name__ == '__main__':
@@ -261,22 +290,22 @@ if __name__ == '__main__':
 
     # Compute metrics over the entire data at once
     metrics_for_v_over_all_samples = {
+        'vector_correlation_coefficient': metrics.vector_correlation_coefficient(),
         'cosine_similarity_index': metrics.cosine_similarity_index(),
-        'mean_squared_error': metrics.mean_squared_error(),
-        'mean_absolute_error': metrics.mean_absolute_error(),
+        'normalized_error': metrics.normalized_error(),
         'mean_absolute_relative_error': metrics.mean_absolute_relative_error(),
         'median_absolute_relative_error': metrics.median_absolute_relative_error(),
-        'pearson_correlation_coefficient': metrics.pearson_correlation_coefficient()
+        'energy_ratio': metrics.energy_ratio()
     }
 
     # Compute metrics over the entire data at once
     metrics_for_v_per_sample = {
+        'vector_correlation_coefficient': metrics.vector_correlation_coefficient(axis=spatial_axes),
         'cosine_similarity_index': metrics.cosine_similarity_index(axis=spatial_axes),
-        'mean_squared_error': metrics.mean_squared_error(axis=spatial_axes),
-        'mean_absolute_error': metrics.mean_absolute_error(axis=spatial_axes),
+        'normalized_error': metrics.normalized_error(axis=spatial_axes),
         'mean_absolute_relative_error': metrics.mean_absolute_relative_error(axis=spatial_axes),
         'median_absolute_relative_error': metrics.median_absolute_relative_error(axis=spatial_axes),
-        'pearson_correlation_coefficient': metrics.pearson_correlation_coefficient(axis=spatial_axes)
+        'energy_ratio': metrics.energy_ratio(axis=spatial_axes)
     }
 
 
@@ -292,22 +321,22 @@ if __name__ == '__main__':
 
     # Compute metrics over the entire data at once
     metrics_for_vx_over_all_samples  = {
-        'mean_squared_error': metrics_vx.mean_squared_error(),
-        'mean_absolute_error': metrics_vx.mean_absolute_error(),
+        'vector_correlation_coefficient': metrics_vx.vector_correlation_coefficient(),
+        'spearman_correlation_coefficient': spearman_correlation_coefficient(v_muram_x, v_model_x),
+        'normalized_error': metrics_vx.normalized_error(),
         'mean_absolute_relative_error': metrics_vx.mean_absolute_relative_error(),
         'median_absolute_relative_error': metrics_vx.median_absolute_relative_error(),
-        'pearson_correlation_coefficient': metrics_vx.pearson_correlation_coefficient(),
-        'spearman_correlation_coefficient': spearman_correlation_coefficient(v_muram_x, v_model_x)
+        'energy_ratio': metrics_vx.energy_ratio()
     }
 
     # Compute metrics over the entire data at once
     metrics_for_vx_per_sample = {
-        'mean_squared_error': metrics_vx.mean_squared_error(axis=spatial_axes),
-        'mean_absolute_error': metrics_vx.mean_absolute_error(axis=spatial_axes),
+        'vector_correlation_coefficient': metrics_vx.vector_correlation_coefficient(axis=spatial_axes),
+        'spearman_correlation_coefficient': spearman_correlation_coefficient(v_muram_x, v_model_x, axis=sample_axis),
+        'normalized_error': metrics_vx.normalized_error(axis=spatial_axes),
         'mean_absolute_relative_error': metrics_vx.mean_absolute_relative_error(axis=spatial_axes),
         'median_absolute_relative_error': metrics_vx.median_absolute_relative_error(axis=spatial_axes),
-        'pearson_correlation_coefficient': metrics_vx.pearson_correlation_coefficient(axis=spatial_axes),
-        'spearman_correlation_coefficient': spearman_correlation_coefficient(v_muram_x, v_model_x, axis=sample_axis)
+        'energy_ratio': metrics_vx.energy_ratio(axis=spatial_axes)
     }
 
     # ---------------------------------------------------------------------
@@ -322,20 +351,20 @@ if __name__ == '__main__':
 
     # Compute metrics over the entire data at once
     metrics_for_sz_over_all_samples = {
-        'mean_squared_error': metrics_sz.mean_squared_error(),
-        'mean_absolute_error': metrics_sz.mean_absolute_error(),
+        'vector_correlation_coefficient': metrics_sz.vector_correlation_coefficient(),
+        'spearman_correlation_coefficient': spearman_correlation_coefficient(v_muram_x, v_model_x),
+        'normalized_error': metrics_sz.normalized_error(),
         'mean_absolute_relative_error': metrics_sz.mean_absolute_relative_error(),
         'median_absolute_relative_error': metrics_sz.median_absolute_relative_error(),
-        'pearson_correlation_coefficient': metrics_sz.pearson_correlation_coefficient(),
-        'spearman_correlation_coefficient': spearman_correlation_coefficient(s_muram_z, s_model_z)
+        'energy_ratio': metrics_sz.energy_ratio()
     }
 
     # Compute metrics over the entire data at once
     metrics_for_sz_per_sample = {
-        'mean_squared_error': metrics_sz.mean_squared_error(axis=spatial_axes),
-        'mean_absolute_error': metrics_sz.mean_absolute_error(axis=spatial_axes),
+        'vector_correlation_coefficient': metrics_sz.vector_correlation_coefficient(axis=spatial_axes),
+        'spearman_correlation_coefficient': spearman_correlation_coefficient(v_muram_x, v_model_x, axis=sample_axis),
+        'normalized_error': metrics_sz.normalized_error(axis=spatial_axes),
         'mean_absolute_relative_error': metrics_sz.mean_absolute_relative_error(axis=spatial_axes),
         'median_absolute_relative_error': metrics_sz.median_absolute_relative_error(axis=spatial_axes),
-        'pearson_correlation_coefficient': metrics_sz.pearson_correlation_coefficient(axis=spatial_axes),
-        'spearman_correlation_coefficient': spearman_correlation_coefficient(s_muram_z, s_model_z, axis=sample_axis)
+        'energy_ratio': metrics_sz.energy_ratio(axis=spatial_axes)
     }
